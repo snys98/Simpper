@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -13,20 +12,21 @@ namespace Simpper
     {
         public override string ToString()
         {
-            return this.SqlBuilder.ToString();
+            return SqlBuilder.ToString();
         }
-        public IDictionary<String, object> SqlParams { get; } = new ExpandoObject() as IDictionary<String, object>;
+
+        public IDictionary<string, object> SqlParams { get; } = new ExpandoObject() as IDictionary<string, object>;
 
         public StringBuilder SqlBuilder { get; private set; }
 
         private OperationType _operationType;
 
-        private int DuplicateParamIdentifier = 0;
+        private int DuplicateParamIdentifier;
         public static string ShardingIndex { get; set; }
 
         public SqlServerSqlGenerator()
         {
-            this.SqlBuilder = new StringBuilder();
+            SqlBuilder = new StringBuilder();
             EntityConfigurations.TryAdd(typeof(T), new EntityMappingCache<T>());
         }
 
@@ -39,64 +39,72 @@ namespace Simpper
             return this;
         }
 
-        public SqlServerSqlGenerator<T> Where(Expression<Func<T, bool>> predicate)
+        public SqlServerSqlGenerator<T> Where(Expression<Func<T, bool>> predicate, ContactorType contactorType = ContactorType.None)
         {
             if (!(predicate is LambdaExpression expression))
                 throw new LinqToSqlException(predicate);
-            var wherePiece = $"WHERE 1 = 1";
+            var wherePiece = "WHERE 1 = 1";
             SqlBuilder.AppendLine(wherePiece);
-            WhereSubclause(expression);
+            WhereSubclause(expression, contactorType);
 
             return this;
         }
 
-        private SqlServerSqlGenerator<T> WhereSubclause(Expression expression)
+        private SqlServerSqlGenerator<T> WhereSubclause(Expression expression,
+            ContactorType contactorType = ContactorType.None)
         {
+            switch (contactorType)
+            {
+                case ContactorType.And:
+                    SqlBuilder.Append("AND ");
+                    break;
+                case ContactorType.Or:
+                    SqlBuilder.Append("OR ");
+                    break;
+                case ContactorType.None:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(contactorType), contactorType, null);
+            }
+
             if (expression is LambdaExpression lambdaExpression)
             {
                 WhereSubclause(lambdaExpression.Body);
             }
             else
             {
-                
                 //子句不单纯, 需要继续拆分
                 if (expression.NodeType == ExpressionType.AndAlso || expression.NodeType == ExpressionType.OrElse)
                 {
-                    var wherePiece = $"AND ";
-                    SqlBuilder.Append(wherePiece);
-                    var exactExpression = (BinaryExpression)expression;
-                    return expression.NodeType == ExpressionType.AndAlso ? this.And(exactExpression) : this.Or(exactExpression);
+                    var exactExpression = (BinaryExpression) expression;
+                    SqlBuilder.Append("AND ");
+                    return expression.NodeType == ExpressionType.AndAlso ? And(exactExpression) : Or(exactExpression);
                 }
-                else
-                {
-                    if (expression.NodeType == ExpressionType.Constant)
-                    {
-                        //常量的true or false,直接跳出
-                        return this;
-                    }
 
-                    switch (expression.NodeType)
+                if (expression.NodeType == ExpressionType.Constant)
+                    return this.Append(" 1 = 1 ");
+
+                switch (expression.NodeType)
+                {
+                    case ExpressionType.Call:
                     {
-                        case ExpressionType.Call:
-                            {
-                                var methodCallExpression = (MethodCallExpression)expression;
-                                this.WhereLikeSubclause(methodCallExpression);
-                                break;
-                            }
-                        case ExpressionType.Equal:
-                        case ExpressionType.NotEqual:
-                        case ExpressionType.GreaterThan:
-                        case ExpressionType.GreaterThanOrEqual:
-                        case ExpressionType.LessThan:
-                        case ExpressionType.LessThanOrEqual:
-                            {
-                                var binaryExpression = (BinaryExpression)expression;
-                                WhereOperatorSubclause(binaryExpression);
-                                break;
-                            }
-                        default:
-                            throw new ArgumentOutOfRangeException();
+                        var methodCallExpression = (MethodCallExpression) expression;
+                        WhereLikeSubclause(methodCallExpression);
+                        break;
                     }
+                    case ExpressionType.Equal:
+                    case ExpressionType.NotEqual:
+                    case ExpressionType.GreaterThan:
+                    case ExpressionType.GreaterThanOrEqual:
+                    case ExpressionType.LessThan:
+                    case ExpressionType.LessThanOrEqual:
+                    {
+                        var binaryExpression = (BinaryExpression) expression;
+                        WhereOperatorSubclause(binaryExpression);
+                        break;
+                    }
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
             }
 
@@ -122,8 +130,8 @@ namespace Simpper
             var tableName = EntityConfigurations[typeof(T)].GetTableName(ShardingIndex);
             var deletePiece = $"DELETE FROM {tableName}";
             SqlBuilder.AppendLine(deletePiece);
-            this.Where(predicate);
-            SqlBuilder.AppendLine("SELECT @@ROWCOUNT");
+            Where(predicate, ContactorType.And);
+            SqlBuilder.AppendLine(" SELECT @@ROWCOUNT");
             return this;
         }
 
@@ -138,7 +146,7 @@ namespace Simpper
             var names = EntityConfigurations[typeof(T)].MutableProperties.Select(x => x.Name);
             var insertPiece = $"INSERT INTO {tableName} {$"({string.Join(',', names)})"}";
             SqlBuilder.AppendLine(insertPiece);
-            this.Values(entity);
+            Values(entity);
             return this;
         }
 
@@ -148,14 +156,15 @@ namespace Simpper
             _operationType = OperationType.Select;
             var names = EntityConfigurations[typeof(T)].MappedProperties.Select(x => x.Name);
             var tableName = EntityConfigurations[typeof(T)].GetTableName(ShardingIndex);
-            var selectPiece = $"SELECT {(top.HasValue ? "TOP(" + top + ")" : string.Empty)} {string.Join(',', names)} FROM {tableName}";
+            var selectPiece =
+                $"SELECT {(top.HasValue ? "TOP(" + top + ")" : string.Empty)} {string.Join(',', names)} FROM {tableName}";
             SqlBuilder.AppendLine(selectPiece);
             return this;
         }
 
         private SqlServerSqlGenerator<T> And(BinaryExpression expression)
         {
-            this.Append("( ")
+            Append("( ")
                 .WhereSubclause(expression.Left)
                 .Append(" AND ")
                 .WhereSubclause(expression.Right)
@@ -165,7 +174,7 @@ namespace Simpper
 
         private SqlServerSqlGenerator<T> Or(BinaryExpression expression)
         {
-            this.Append("( ")
+            Append("( ")
                 .WhereSubclause(expression.Left)
                 .Append(" OR ")
                 .WhereSubclause(expression.Right)
@@ -175,7 +184,7 @@ namespace Simpper
 
         private SqlServerSqlGenerator<T> Append(string s)
         {
-            this.SqlBuilder.Append(s);
+            SqlBuilder.Append(s);
             return this;
         }
 
@@ -189,13 +198,13 @@ namespace Simpper
 
         private SqlServerSqlGenerator<T> Set(object entityPartial)
         {
-            var dictionary = entityPartial.GetType().GetProperties().Intersect(EntityConfigurations[typeof(T)].MutableProperties, GenericComparer<PropertyInfo>.Create(x => x.Name)).ToDictionary(x => x.Name, x => x.GetValue(entityPartial));
+            var dictionary = entityPartial.GetType().GetProperties()
+                .Intersect(EntityConfigurations[typeof(T)].MutableProperties,
+                    GenericComparer<PropertyInfo>.Create(x => x.Name))
+                .ToDictionary(x => x.Name, x => x.GetValue(entityPartial));
             var valuesPiece = $"SET ({string.Join(',', dictionary.Select(x => x.Key))})";
             SqlBuilder.AppendLine(valuesPiece);
-            foreach (var name in dictionary)
-            {
-                this.SqlParams[name.Key] = name.Value;
-            }
+            foreach (var name in dictionary) SqlParams[name.Key] = name.Value;
             return this;
         }
 
@@ -204,40 +213,38 @@ namespace Simpper
             _operationType = OperationType.Update;
             var tableName = EntityConfigurations[typeof(T)].GetTableName(ShardingIndex);
             var insertPiece = $"UPDATE {tableName}";
-            this.AppendLine(insertPiece)
+            AppendLine(insertPiece)
                 .Set(entityPartial)
                 .Values(entityPartial)
-                .Where(predicate);
+                .Where(predicate,ContactorType.And);
             return this;
         }
 
         private SqlServerSqlGenerator<T> AppendLine(string insertPiece)
         {
-            this.SqlBuilder.AppendLine(insertPiece);
+            SqlBuilder.AppendLine(insertPiece);
             return this;
         }
 
         private SqlServerSqlGenerator<T> Values(object entityPartial)
         {
-            var dictionary = entityPartial.GetType().GetProperties().Intersect(EntityConfigurations[typeof(T)].MutableProperties, GenericComparer<PropertyInfo>.Create(x => x.Name)).ToDictionary(x => x.Name, x => x.GetValue(entityPartial));
+            var dictionary = entityPartial.GetType().GetProperties()
+                .Intersect(EntityConfigurations[typeof(T)].MutableProperties,
+                    GenericComparer<PropertyInfo>.Create(x => x.Name))
+                .ToDictionary(x => x.Name, x => x.GetValue(entityPartial));
             var valuesPiece = $"VALUES ({string.Join(',', dictionary.Select(x => "@" + x.Key))})";
             SqlBuilder.AppendLine(valuesPiece);
-            foreach (var name in dictionary)
-            {
-                this.SqlParams[name.Key] = name.Value;
-            }
+            foreach (var name in dictionary) SqlParams[name.Key] = name.Value;
             return this;
         }
 
         private SqlServerSqlGenerator<T> Values(T entity)
         {
-            var dictionary = EntityConfigurations[typeof(T)].MutableProperties.ToDictionary(x => x.Name, x => x.GetValue(entity));
+            var dictionary = EntityConfigurations[typeof(T)].MutableProperties
+                .ToDictionary(x => x.Name, x => x.GetValue(entity));
             var valuesPiece = $"VALUES ({string.Join(',', dictionary.Select(x => "@" + x.Key))})";
             SqlBuilder.AppendLine(valuesPiece);
-            foreach (var name in dictionary)
-            {
-                this.SqlParams[name.Key] = name.Value;
-            }
+            foreach (var name in dictionary) SqlParams[name.Key] = name.Value;
             return this;
         }
 
@@ -264,9 +271,11 @@ namespace Simpper
                         likeSubclause = $"%{constant.Value}%";
                         break;
                 }
+
                 var result = $"{columnName} LIKE {likeSubclause}";
                 return result;
             }
+
             throw new NotSupportedException();
         }
 
@@ -309,23 +318,20 @@ namespace Simpper
             var paramName = GetParamName(columnName);
             if (binaryExpression.Right is ConstantExpression constant)
             {
-                this.SqlParams[paramName] = constant.Value;
+                SqlParams[paramName] = constant.Value;
                 SqlBuilder.Append($"{columnName} {@operator} @{paramName}");
                 return this;
             }
 
             var value = Expression.Lambda(binaryExpression.Right).Compile().DynamicInvoke();
-            this.SqlParams[paramName] = value;
+            SqlParams[paramName] = value;
             SqlBuilder.Append($"{columnName} {@operator} @{paramName}");
             return this;
         }
 
         private string GetParamName(string columnName)
         {
-            if (this.SqlParams.ContainsKey(columnName))
-            {
-                return columnName + DuplicateParamIdentifier++;
-            }
+            if (SqlParams.ContainsKey(columnName)) return columnName + DuplicateParamIdentifier++;
 
             return columnName;
         }
@@ -334,15 +340,11 @@ namespace Simpper
         {
             MemberExpression memberExpression;
             if (sort.Body is UnaryExpression unaryExpression)
-            {
-                memberExpression = (MemberExpression)unaryExpression.Operand;
-            }
+                memberExpression = (MemberExpression) unaryExpression.Operand;
             else
-            {
-                memberExpression = (MemberExpression)sort.Body;
-            }
+                memberExpression = (MemberExpression) sort.Body;
             var columnName = GetColumnName(memberExpression.Member as PropertyInfo);
-            var selectPiece = $"ORDER BY {columnName}";
+            var selectPiece = $" ORDER BY {columnName}";
             SqlBuilder.AppendLine(selectPiece);
             return this;
         }
@@ -360,7 +362,7 @@ namespace Simpper
             var names = EntityConfigurations[typeof(T)].MutableProperties.Select(x => x.Name);
             var insertPiece = $"INSERT INTO {tableName} {$"({string.Join(',', names)})"}";
             SqlBuilder.AppendLine(insertPiece);
-            this.BulkValues(entities);
+            BulkValues(entities);
             return this;
         }
 
@@ -368,17 +370,25 @@ namespace Simpper
         {
             var dictionary = EntityConfigurations[typeof(T)].MutableProperties
                 .ToDictionary(x => x.Name, x => new Func<T, object>(y => x.GetValue(y)));
-            var valuesPiece = $"VALUES";
+            var valuesPiece = "VALUES";
             SqlBuilder.AppendLine(valuesPiece);
             foreach (var entity in entities)
             {
                 var line = $"{$"({string.Join(',', dictionary.Select(x => x.Value.Invoke(entity)))}),"}";
                 SqlBuilder.AppendLine(line);
             }
+
             // 去掉尾逗号和\r\n, 共计3个字符
             SqlBuilder = SqlBuilder.Remove(SqlBuilder.Length - 3, 2);
             return this;
         }
+    }
+
+    public enum ContactorType
+    {
+        And,
+        Or,
+        None
     }
 
     public enum OperationType

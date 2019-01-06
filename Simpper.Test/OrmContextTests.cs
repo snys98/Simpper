@@ -233,7 +233,7 @@ namespace Simpper.Test
                     });
                 }
 
-                Expression<Func<TestEntity, bool>> predicate = x => true;
+                Expression<Func<TestEntity, bool>> predicate = x => x.IntField != 900;
                 Expression<Func<TestEntity, object>> sort = x => x.StringField;
                 int pageIndex = 1;
                 int pageSize = 30;
