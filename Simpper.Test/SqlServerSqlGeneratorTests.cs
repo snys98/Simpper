@@ -253,6 +253,21 @@ namespace Simpper.Test
         }
 
         [Fact]
+        public void BuildWhereClause_should_work_with_multiple_where()
+        {
+            var entity = new TestEntity() { IntField = 3 };
+            // Arrange
+            var unitUnderTest = this.CreateSqlServerSqlGenerator();
+            var fieldName = typeof(TestEntity).GetProperty("IntField").GetReflectedColumnName();
+
+            // Act
+            var result = unitUnderTest.Where((x) => x.IntField > 1 + 1).Where(x => x.IntField < 0);
+
+            result.SqlBuilder.ToString().Should().Contain(fieldName + " > @" + fieldName);
+            result.SqlParams["IntField"].Should().Be(2);
+        }
+
+        [Fact]
         public void BuildWhereClause_should_work_with_and_condition()
         {
             var entity = new TestEntity() { IntField = 3 };

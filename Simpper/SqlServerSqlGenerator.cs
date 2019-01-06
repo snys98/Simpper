@@ -19,7 +19,7 @@ namespace Simpper
 
         public StringBuilder SqlBuilder { get; private set; }
 
-        private OperationType _operationType;
+        private GenerateStage _generateStage;
 
         private int DuplicateParamIdentifier;
         public static string ShardingIndex { get; set; }
@@ -32,7 +32,7 @@ namespace Simpper
 
         public SqlServerSqlGenerator<T> Count()
         {
-            _operationType = OperationType.Select;
+            _generateStage = GenerateStage.Select;
             var tableName = EntityConfigurations[typeof(T)].GetTableName(ShardingIndex);
             var selectPiece = $"SELECT COUNT(1) FROM {tableName}";
             SqlBuilder.AppendLine(selectPiece);
@@ -43,10 +43,9 @@ namespace Simpper
         {
             if (!(predicate is LambdaExpression expression))
                 throw new LinqToSqlException(predicate);
-            var wherePiece = "WHERE 1 = 1";
-            SqlBuilder.AppendLine(wherePiece);
+            SqlBuilder.AppendLine("WHERE 1 = 1");
             WhereSubclause(expression, contactorType);
-
+            SqlBuilder.AppendLine();
             return this;
         }
 
@@ -76,7 +75,7 @@ namespace Simpper
                 //子句不单纯, 需要继续拆分
                 if (expression.NodeType == ExpressionType.AndAlso || expression.NodeType == ExpressionType.OrElse)
                 {
-                    var exactExpression = (BinaryExpression) expression;
+                    var exactExpression = (BinaryExpression)expression;
                     SqlBuilder.Append("AND ");
                     return expression.NodeType == ExpressionType.AndAlso ? And(exactExpression) : Or(exactExpression);
                 }
@@ -87,22 +86,22 @@ namespace Simpper
                 switch (expression.NodeType)
                 {
                     case ExpressionType.Call:
-                    {
-                        var methodCallExpression = (MethodCallExpression) expression;
-                        WhereLikeSubclause(methodCallExpression);
-                        break;
-                    }
+                        {
+                            var methodCallExpression = (MethodCallExpression)expression;
+                            WhereLikeSubclause(methodCallExpression);
+                            break;
+                        }
                     case ExpressionType.Equal:
                     case ExpressionType.NotEqual:
                     case ExpressionType.GreaterThan:
                     case ExpressionType.GreaterThanOrEqual:
                     case ExpressionType.LessThan:
                     case ExpressionType.LessThanOrEqual:
-                    {
-                        var binaryExpression = (BinaryExpression) expression;
-                        WhereOperatorSubclause(binaryExpression);
-                        break;
-                    }
+                        {
+                            var binaryExpression = (BinaryExpression)expression;
+                            WhereOperatorSubclause(binaryExpression);
+                            break;
+                        }
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -126,7 +125,7 @@ namespace Simpper
 
         public SqlServerSqlGenerator<T> Delete(Expression<Func<T, bool>> predicate)
         {
-            _operationType = OperationType.Delete;
+            _generateStage = GenerateStage.Delete;
             var tableName = EntityConfigurations[typeof(T)].GetTableName(ShardingIndex);
             var deletePiece = $"DELETE FROM {tableName}";
             SqlBuilder.AppendLine(deletePiece);
@@ -141,7 +140,7 @@ namespace Simpper
 
         public SqlServerSqlGenerator<T> Insert(T entity)
         {
-            _operationType = OperationType.Insert;
+            _generateStage = GenerateStage.Insert;
             var tableName = EntityConfigurations[typeof(T)].GetTableName(ShardingIndex);
             var names = EntityConfigurations[typeof(T)].MutableProperties.Select(x => x.Name);
             var insertPiece = $"INSERT INTO {tableName} {$"({string.Join(',', names)})"}";
@@ -153,7 +152,7 @@ namespace Simpper
 
         public SqlServerSqlGenerator<T> Select(int? top = null)
         {
-            _operationType = OperationType.Select;
+            _generateStage = GenerateStage.Select;
             var names = EntityConfigurations[typeof(T)].MappedProperties.Select(x => x.Name);
             var tableName = EntityConfigurations[typeof(T)].GetTableName(ShardingIndex);
             var selectPiece =
@@ -210,13 +209,13 @@ namespace Simpper
 
         public SqlServerSqlGenerator<T> Update(Expression<Func<T, bool>> predicate, object entityPartial)
         {
-            _operationType = OperationType.Update;
+            _generateStage = GenerateStage.Update;
             var tableName = EntityConfigurations[typeof(T)].GetTableName(ShardingIndex);
             var insertPiece = $"UPDATE {tableName}";
             AppendLine(insertPiece)
                 .Set(entityPartial)
                 .Values(entityPartial)
-                .Where(predicate,ContactorType.And);
+                .Where(predicate, ContactorType.And);
             return this;
         }
 
@@ -340,9 +339,9 @@ namespace Simpper
         {
             MemberExpression memberExpression;
             if (sort.Body is UnaryExpression unaryExpression)
-                memberExpression = (MemberExpression) unaryExpression.Operand;
+                memberExpression = (MemberExpression)unaryExpression.Operand;
             else
-                memberExpression = (MemberExpression) sort.Body;
+                memberExpression = (MemberExpression)sort.Body;
             var columnName = GetColumnName(memberExpression.Member as PropertyInfo);
             var selectPiece = $" ORDER BY {columnName}";
             SqlBuilder.AppendLine(selectPiece);
@@ -390,13 +389,22 @@ namespace Simpper
         Or,
         None
     }
-
-    public enum OperationType
+    [Flags]
+    public enum GenerateStage
     {
-        Select,
-        Insert,
-        Update,
-        Delete
+        //todo:还没有想清楚如何设计
+        Select = 0,
+        Insert = 1,
+        Update = 2,
+        Delete = 4,
+        Where = 8,
+        GroupBy = 16,
+        OrderBy = 32,
+        Set = 64,
+        Values = 128,
+        Offset = 256,
+        Fetch = 512,
+        Top = 1024
     }
 
     public enum LikeClauseMatchType
