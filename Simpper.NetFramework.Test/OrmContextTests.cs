@@ -1,19 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
-using System.Xml.Linq;
 using Dapper;
 using FluentAssertions;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Xunit;
 
-namespace Simpper.Test
+namespace Simpper.NetFramework.Test
 {
-    public class OrmContextTests : IDisposable
+    [TestClass]
+    public class OrmContextTests
     {
         private MockRepository mockRepository;
         private string _connStr = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=Test;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
@@ -108,8 +106,8 @@ namespace Simpper.Test
         {
             return new OrmContext(connection, sharding);
         }
-        [Fact]
-        public void QueryFirst_should_success_when_has_key_identity()
+        [TestMethod]
+        public void select_one_should_success_when_has_key_identity()
         {
             using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
             {
@@ -149,7 +147,7 @@ namespace Simpper.Test
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void insert_and_query_should_be_in_correct_sharding()
         {
             using (var unitUnderTest1 = this.CreateOrmContext(new SqlConnection(_connStr), x => x))
@@ -191,8 +189,8 @@ namespace Simpper.Test
             }
         }
 
-        [Fact]
-        public void QueryPage_should_success()
+        [TestMethod]
+        public void select_list_should_success()
         {
             // Arrange
             using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
@@ -227,8 +225,44 @@ namespace Simpper.Test
             }
         }
 
-        [Fact]
-        public void QueryPage_should_return_rest_when_not_enough()
+        [TestMethod]
+        public void select_should_work_with_nest_conditions()
+        {
+            // Arrange
+            using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
+            {
+
+                for (int i = 0; i < 50; i++)
+                {
+                    unitUnderTest.Insert(new TestEntity()
+                    {
+                        IntField = i,
+                        StringField = (i + 1).ToString(),
+                        EnumField = TestEnum.One,
+                        LongField = 2 * i
+                    });
+                }
+
+                int pageIndex = 1;
+                int pageSize = 20;
+
+                // Act
+                var result = unitUnderTest.QueryPage<TestEntity>(
+                    x => x.IntField == 30 || (x.LongField == 68 || x.StringField == "32") || x.StringField == "33" && x.IntField == 33,
+                    x => x.IntField, 0, 100);
+
+                // Assert
+                result.Count.Should().Be(3);
+                result[0].IntField.Should().Be(30);
+                result[1].IntField.Should().Be(31);
+                //result[2].IntField.Should().Be(32);
+                result[2].IntField.Should().Be(34);
+            }
+        }
+
+
+        [TestMethod]
+        public void select_list_should_return_rest_when_not_enough()
         {
             // Arrange
             using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
@@ -259,8 +293,8 @@ namespace Simpper.Test
             }
         }
 
-        [Fact]
-        public void Count_StateUnderTest_ExpectedBehavior()
+        [TestMethod]
+        public void count_should_success()
         {
             // Arrange
             using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
@@ -280,8 +314,8 @@ namespace Simpper.Test
             }
         }
 
-        [Fact]
-        public void insert_all_field_should_success()
+        [TestMethod]
+        public void insert_all_fields_should_success()
         {
             // Arrange
             using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
@@ -289,7 +323,7 @@ namespace Simpper.Test
                 var entity = new TestEntity()
                 {
                     IntField = 1,
-                    DateTimeField = DateTime.UnixEpoch,
+                    DateTimeField = DateTime.Now.ToUnixEpoch(),
                     DecimalField = 0.23333333333M,
                     EnumField = TestEnum.One,
                     ExtraNotMapped = "ExtraNotMapped",
@@ -305,7 +339,7 @@ namespace Simpper.Test
 
                 // Assert
                 result.IntField.Should().Be(entity.IntField);
-                result.DateTimeField.Should().Be(entity.DateTimeField);
+                result.DateTimeField.ToString("s").Should().Be(entity.DateTimeField.ToString("s"));
                 result.DecimalField.Should().Be(entity.DecimalField);
                 result.EnumField.Should().Be(entity.EnumField);
                 result.ExtraNotMapped.Should().Be(null);
@@ -316,9 +350,56 @@ namespace Simpper.Test
                 result.StringField.Should().Be(entity.StringField);
             }
         }
+        [TestMethod]
+        public void update_partial_fields_should_success()
+        {
+            // Arrange
+            using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
+            {
+                var entity = new TestEntity()
+                {
+                    IntField = 1,
+                    DateTimeField = DateTime.Now.ToUnixEpoch(),
+                    DecimalField = 0.23333333333M,
+                    EnumField = TestEnum.One,
+                    ExtraNotMapped = "ExtraNotMapped",
+                    ExtraNotMappedWithBackingField = "ExtraNotMappedWithBackingField",
+                    GuidField = Guid.Parse("025017ca-7259-4604-8760-85b4b343270a"),
+                    LongField = 2222222222,
+                    NullableDateTimeField = null,
+                    StringField = "StringField"
+                };
+                unitUnderTest.Insert(entity);
+                // Act
+                var result = unitUnderTest.QueryFirst<TestEntity>(x => x.GuidField == Guid.Parse("025017ca-7259-4604-8760-85b4b343270a"));
 
-        [Fact]
-        public void Delete_StateUnderTest_ExpectedBehavior()
+                // Assert
+                result.IntField.Should().Be(entity.IntField);
+                result.DateTimeField.ToString("s").Should().Be(entity.DateTimeField.ToString("s"));
+                result.DecimalField.Should().Be(entity.DecimalField);
+                result.EnumField.Should().Be(entity.EnumField);
+                result.ExtraNotMapped.Should().Be(null);
+                result.ExtraNotMappedWithBackingField.Should().Be(null);
+                result.GuidField.Should().Be(Guid.Parse("025017ca-7259-4604-8760-85b4b343270a"));
+                result.LongField.Should().Be(entity.LongField);
+                result.NullableDateTimeField.Should().Be(null);
+                result.StringField.Should().Be(entity.StringField);
+
+                var updateResult = unitUnderTest.Update<TestEntity>(x => x.GuidField == Guid.Parse("025017ca-7259-4604-8760-85b4b343270a"), new
+                {
+                    LongField = entity.LongField + 3,
+                    IntField = entity.IntField + 4
+                });
+                updateResult.Should().Be(1);
+                var afterEntity = unitUnderTest.QueryFirst<TestEntity>(x =>
+                    x.GuidField == Guid.Parse("025017ca-7259-4604-8760-85b4b343270a"));
+                afterEntity.LongField.Should().Be(entity.LongField + 3);
+                afterEntity.IntField.Should().Be(entity.IntField + 4);
+            }
+        }
+
+        [TestMethod]
+        public void delete_should_success()
         {
             // Arrange
             using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
@@ -339,7 +420,7 @@ namespace Simpper.Test
             }
         }
 
-        [Fact]
+        [TestMethod]
         public void bulk_insert_should_success()
         {
             // Arrange
@@ -370,7 +451,8 @@ namespace Simpper.Test
             }
         }
 
-        [Fact(Skip = "skip performance test")]
+        [TestMethod()]
+        [Ignore]
         public void PerformanceTest_100W_rows_page_query()
         {
             // Arrange

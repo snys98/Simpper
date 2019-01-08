@@ -1,12 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Simpper.Test
+namespace Simpper.NetFramework.Test
 {
     [Table("TestEntity")]
     public class TestEntity
     {
+        public TestEntity()
+        {
+            DateTimeField = DateTime.Now;
+        }
+
         [Key]
         [Identity]
         public int Id { get; set; }
@@ -16,7 +19,7 @@ namespace Simpper.Test
         [Column("IntField")]
         public int IntField { get; set; }
         [Column("DateTimeField")]
-        public DateTime DateTimeField { get; set; } = DateTime.Now;
+        public DateTime DateTimeField { get; set; }
         [Column("NullableDateTimeField")]
         public DateTime? NullableDateTimeField { get; set; }
         [Column("EnumField")]

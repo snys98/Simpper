@@ -1,14 +1,13 @@
-using Moq;
-using Simpper;
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Text;
 using FluentAssertions;
-using Xunit;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
-namespace Simpper.Test
+namespace Simpper.NetFramework.Test
 {
+    [TestClass]
     public class SqlServerSqlGeneratorTests : IDisposable
     {
         private MockRepository mockRepository;
@@ -28,8 +27,8 @@ namespace Simpper.Test
             return new SqlServerSqlGenerator<TestEntity>();
         }
 
-        [Fact]
-        public void Insert_StateUnderTest_ExpectedBehavior()
+        [TestMethod]
+        public void insert_should_success()
         {
             // Arrange
             var unitUnderTest = this.CreateSqlServerSqlGenerator();
@@ -46,7 +45,7 @@ namespace Simpper.Test
                 .And.NotContain("Id");
         }
 
-        [Fact]
+        [TestMethod]
         public void bulk_insert_should_generate_correct_sql()
         {
             // Arrange
@@ -72,8 +71,8 @@ VALUES
 (@StringField1,@IntField1,@DateTimeField1,@NullableDateTimeField1,@EnumField1,@DecimalField1,@GuidField1,@LongField1)".Trim());
         }
 
-        [Fact]
-        public void Update_StateUnderTest_ExpectedBehavior()
+        [TestMethod]
+        public void update_should_work_with_where()
         {
             // Arrange
             var unitUnderTest = this.CreateSqlServerSqlGenerator();
@@ -90,16 +89,14 @@ VALUES
                 entity.StringField
             }).SqlBuilder.ToString().Should().Contain(new StringBuilder()
                 .AppendLine("UPDATE TestEntity")
-                .AppendLine("SET (StringField)")
-                .AppendLine("VALUES")
-                .AppendLine("(@StringField0)")
-                .AppendLine("WHERE 1 = 1")
-                .Append("AND IntField = @IntField0")
+                .AppendLine("SET StringField = @StringField")
+                .AppendLine("WHERE")
+                .AppendLine("IntField = @IntField0")
                 .ToString().Trim());
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_contains()
+        [TestMethod]
+        public void where_should_work_with_contains()
         {
             // Arrange
             var unitUnderTest = this.CreateSqlServerSqlGenerator();
@@ -111,8 +108,21 @@ VALUES
             result.SqlBuilder.ToString().Should().Contain(fieldName + " LIKE %20%");
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_end_with()
+        [TestMethod]
+        public void where_should_work_with_not_contains()
+        {
+            // Arrange
+            var unitUnderTest = this.CreateSqlServerSqlGenerator();
+            var fieldName = typeof(TestEntity).GetProperty("StringField").GetReflectedColumnName();
+
+            // Act
+            var result = unitUnderTest.Where((x) => !x.StringField.Contains("20"));
+
+            result.SqlBuilder.ToString().Should().Contain("NOT "+ fieldName + " LIKE %20%");
+        }
+
+        [TestMethod]
+        public void where_should_work_with_end_with()
         {
             var entity = new TestEntity() { StringField = "200" };
             // Arrange
@@ -125,8 +135,8 @@ VALUES
             result.SqlBuilder.ToString().Should().Contain(fieldName + " LIKE %20");
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_start_with()
+        [TestMethod]
+        public void where_should_work_with_start_with()
         {
             // Arrange
             var unitUnderTest = this.CreateSqlServerSqlGenerator();
@@ -138,8 +148,8 @@ VALUES
             result.SqlBuilder.ToString().Should().Contain(fieldName + " LIKE 20%");
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_simple_eval_value()
+        [TestMethod]
+        public void where_should_work_with_simple_eval_value()
         {
             // Arrange
             var unitUnderTest = this.CreateSqlServerSqlGenerator();
@@ -152,8 +162,8 @@ VALUES
             result.SqlParams["IntField0"].Should().Be(2);
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_multiple_where()
+        [TestMethod]
+        public void where_should_work_with_multiple_where()
         {
             // Arrange
             var unitUnderTest = this.CreateSqlServerSqlGenerator();
@@ -166,8 +176,8 @@ VALUES
             result.SqlParams["IntField0"].Should().Be(2);
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_and_condition()
+        [TestMethod]
+        public void where_should_work_with_and_condition()
         {
             var entity = new TestEntity() { IntField = 3 };
             // Arrange
@@ -178,13 +188,13 @@ VALUES
             var result = unitUnderTest.Where((x) => x.IntField > 1 && x.IntField < 4);
 
             result.SqlBuilder.ToString().Should().Contain(new StringBuilder()
-                .AppendLine("WHERE 1 = 1")
+                .AppendLine("WHERE")
                 .AppendLine("( IntField > @IntField0 AND IntField < @IntField1 )")
                 .ToString().Trim());
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_or_condition()
+        [TestMethod]
+        public void where_should_work_with_or_condition()
         {
             // Arrange
             var unitUnderTest = this.CreateSqlServerSqlGenerator();
@@ -194,13 +204,13 @@ VALUES
             var result = unitUnderTest.Where((x) => x.IntField < 2 || x.IntField > 4);
 
             result.SqlBuilder.ToString().Should().Contain(new StringBuilder()
-                .AppendLine("WHERE 1 = 1")
-                .AppendLine("AND ( IntField < @IntField0 OR IntField > @IntField1 )")
+                .AppendLine("WHERE")
+                .AppendLine("( IntField < @IntField0 OR IntField > @IntField1 )")
                 .ToString().Trim());
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_complex_eval_value()
+        [TestMethod]
+        public void where_should_work_with_complex_eval_value()
         {
             var entity = new TestEntity() { IntField = 7 };
             // Arrange
@@ -214,8 +224,8 @@ VALUES
             result.SqlParams["IntField0"].Should().Be((int)DateTime.Now.DayOfWeek + 1);
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_complex_condition()
+        [TestMethod]
+        public void where_should_work_with_complex_condition()
         {
             // Arrange
             var unitUnderTest = this.CreateSqlServerSqlGenerator();
@@ -224,16 +234,16 @@ VALUES
             // Act
             var result = unitUnderTest.Where((x) => x.IntField >= (int)DateTime.Now.DayOfWeek + 1 && x.IntField < 30 || x.LongField < 0);
 
-            result.SqlBuilder.ToString().Should().Contain(@"WHERE 1 = 1
-AND ( ( IntField >= @IntField0 AND IntField < @IntField1 ) OR LongField < @LongField0 )
+            result.SqlBuilder.ToString().Should().Contain(@"WHERE
+( ( IntField >= @IntField0 AND IntField < @IntField1 ) OR LongField < @LongField0 )
 ");
             result.SqlParams["IntField0"].Should().Be((int)DateTime.Now.DayOfWeek + 1);
             result.SqlParams["IntField1"].Should().Be(30);
             result.SqlParams["LongField0"].Should().Be(0);
         }
 
-        [Fact]
-        public void BuildWhereClause_should_work_with_int()
+        [TestMethod]
+        public void where_should_work_with_int()
         {
             var entity = new TestEntity() { IntField = 20 };
             // Arrange
