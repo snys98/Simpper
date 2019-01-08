@@ -11,6 +11,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simpper.NetFramework", "Sim
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simpper.NetFramework.Test", "Simpper.NetFramework.Test\Simpper.NetFramework.Test.csproj", "{BF9FA355-946C-438C-9DC7-DB639A403D91}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{113B63D6-D67D-47D6-9B83-90CB4535700D}"
+	ProjectSection(SolutionItems) = preProject
+		.travlis.yml = .travlis.yml
+		build.ps1 = build.ps1
+		deploy.ps1 = deploy.ps1
+		install.ps1 = install.ps1
+		README.md = README.md
+		test.ps1 = test.ps1
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
