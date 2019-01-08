@@ -1,7 +1,7 @@
 language: csharp
 solution: Simpper.sln
 script:
-  - ./build.ps1
-  - ./test.ps1
+  - ./build.sh
+  - ./test.sh
 install:
-  - ./install.ps1
+  - ./install.sh
