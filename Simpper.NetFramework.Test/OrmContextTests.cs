@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using Dapper;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -13,15 +15,18 @@ namespace Simpper.NetFramework.Test
     [TestClass]
     public class OrmContextTests
     {
+        static string outputFolder = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Data");
         private MockRepository mockRepository;
-        private string _connStr = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=Test;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False";
+        private string _connStr = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=Test;Integrated Security=True";
         private string _connStr1 = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=TestShader1;Integrated Security=True";
         private string _connStr2 = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=TestShader2;Integrated Security=True";
 
-
         public OrmContextTests()
         {
+            // try create database
+
             this.mockRepository = new MockRepository(MockBehavior.Strict);
+            CreateDatabaseIfNotExist();
             using (var conn = new SqlConnection(_connStr))
             {
                 conn.Execute("EXEC sp_msforeachtable \"ALTER TABLE ? NOCHECK CONSTRAINT all\"");
@@ -40,7 +45,6 @@ namespace Simpper.NetFramework.Test
                     [LongField] BIGINT NULL,
                 )
                 ");
-
 
             }
 
@@ -106,6 +110,7 @@ namespace Simpper.NetFramework.Test
         {
             return new OrmContext(connection, sharding);
         }
+
         [TestMethod]
         public void select_one_should_success_when_has_key_identity()
         {
@@ -243,9 +248,6 @@ namespace Simpper.NetFramework.Test
                     });
                 }
 
-                int pageIndex = 1;
-                int pageSize = 20;
-
                 // Act
                 var result = unitUnderTest.QueryPage<TestEntity>(
                     x => x.IntField == 30 || (x.LongField == 68 || x.StringField == "32") || x.StringField == "33" && x.IntField == 33,
@@ -259,7 +261,6 @@ namespace Simpper.NetFramework.Test
                 result[2].IntField.Should().Be(34);
             }
         }
-
 
         [TestMethod]
         public void select_list_should_return_rest_when_not_enough()
@@ -350,6 +351,7 @@ namespace Simpper.NetFramework.Test
                 result.StringField.Should().Be(entity.StringField);
             }
         }
+
         [TestMethod]
         public void update_partial_fields_should_success()
         {
@@ -392,7 +394,7 @@ namespace Simpper.NetFramework.Test
                 });
                 updateResult.Should().Be(1);
                 var afterEntity = unitUnderTest.QueryFirst<TestEntity>(x =>
-                    x.GuidField == Guid.Parse("025017ca-7259-4604-8760-85b4b343270a"));
+                   x.GuidField == Guid.Parse("025017ca-7259-4604-8760-85b4b343270a"));
                 afterEntity.LongField.Should().Be(entity.LongField + 3);
                 afterEntity.IntField.Should().Be(entity.IntField + 4);
             }
@@ -484,6 +486,52 @@ namespace Simpper.NetFramework.Test
 
                 // Assert
                 result.Count.Should().Be(pageSize);
+            }
+        }
+        public static void CreateDatabaseIfNotExist()
+        {
+            if (!Directory.Exists(outputFolder))
+            {
+                Directory.CreateDirectory(outputFolder);
+            }
+
+            var testDbPath = Path.Combine(outputFolder, "Test.mdf");
+            if (!File.Exists(testDbPath))
+            {
+                string connectionString = String.Format("Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=master;Integrated Security=True");
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+                    SqlCommand cmd = connection.CreateCommand();
+                    cmd.CommandText = String.Format("CREATE DATABASE {0} ON (NAME = N'{0}', FILENAME = '{1}')", "Test", testDbPath);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            var testShader1DbPath = Path.Combine(outputFolder, "TestShader1.mdf");
+            if (!File.Exists(testShader1DbPath))
+            {
+                string connectionString = String.Format("Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=master;Integrated Security=True");
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+                    SqlCommand cmd = connection.CreateCommand();
+                    cmd.CommandText = String.Format("CREATE DATABASE {0} ON (NAME = N'{0}', FILENAME = '{1}')", "TestShader1", testShader1DbPath);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+
+            var testShader2DbPath = Path.Combine(outputFolder, "TestShader2.mdf");
+            if (!File.Exists(testShader2DbPath))
+            {
+                string connectionString = String.Format("Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=master;Integrated Security=True");
+                using (var connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+                    SqlCommand cmd = connection.CreateCommand();
+                    cmd.CommandText = String.Format("CREATE DATABASE {0} ON (NAME = N'{0}', FILENAME = '{1}')", "TestShader2", testShader2DbPath);
+                    cmd.ExecuteNonQuery();
+                }
             }
         }
     }
