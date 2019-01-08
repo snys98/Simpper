@@ -5,14 +5,3 @@ script:
   - ./test.ps1
 install:
   - ./install.ps1
-# jobs:
-#   include:
-#     - script: ./test.ps1
-#     - stage: GitHub Release
-#       script: skip
-#       deploy:
-#         provider: releases
-#         api_key: ""
-#         skip_cleanup: true
-#         on:
-#           tags: true
