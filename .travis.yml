@@ -1,11 +1,7 @@
 language: csharp
 mono: none
-dotnet: 2.2.101
+dotnet: 2.2
 solution: Simpper.sln
 script:
   - ./build.sh
   - ./test.sh
-matrix:
-  include:
-    - dotnet: 2.2.101
-      mono: none
