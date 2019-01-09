@@ -78,38 +78,27 @@ namespace Simpper.NetFramework
             }
             else
             {
-                //子句不单纯, 需要继续拆分
-                if (expression.NodeType == ExpressionType.AndAlso || expression.NodeType == ExpressionType.OrElse)
-                {
-                    var exactExpression = (BinaryExpression)expression;
-                    if (expression.NodeType == ExpressionType.AndAlso)
-                    {
-                        return And(exactExpression);
-                    }
-                    else
-                    {
-                        return this.Or(exactExpression);
-                    }
-                }
-
-                if (expression.NodeType == ExpressionType.Not)
-                {
-                    var unaryExpression = expression as UnaryExpression;
-                    return this.Not(unaryExpression);
-                }
-
-                if (expression.NodeType == ExpressionType.Constant)
-                {
-                    this.SqlBuilder.Append(" 1 = 1 ");
-                    return this;
-                }
-
                 switch (expression.NodeType)
                 {
+                    //子句不单纯, 需要继续拆分
+                    case ExpressionType.AndAlso:
+                    case ExpressionType.OrElse:
+                        {
+                            var exactExpression = (BinaryExpression)expression;
+                            return expression.NodeType == ExpressionType.AndAlso
+                                ? And(exactExpression)
+                                : this.Or(exactExpression);
+                        }
+                    case ExpressionType.Not:
+                        {
+                            return this.Not(expression as UnaryExpression);
+                        }
+                    case ExpressionType.Constant:
+                        this.SqlBuilder.Append(" 1 = 1 ");
+                        return this;
                     case ExpressionType.Call:
                         {
-                            var methodCallExpression = (MethodCallExpression)expression;
-                            WhereLikeSubclause(methodCallExpression);
+                            WhereLikeSubclause(expression as MethodCallExpression);
                             break;
                         }
                     case ExpressionType.Equal:
@@ -119,8 +108,7 @@ namespace Simpper.NetFramework
                     case ExpressionType.LessThan:
                     case ExpressionType.LessThanOrEqual:
                         {
-                            var binaryExpression = (BinaryExpression)expression;
-                            WhereOperatorSubclause(binaryExpression);
+                            WhereOperatorSubclause(expression as BinaryExpression);
                             break;
                         }
                     default:
@@ -135,12 +123,19 @@ namespace Simpper.NetFramework
         {
             if (!(methodCallExpression.Arguments[0] is ConstantExpression) || !(((ConstantExpression)methodCallExpression.Arguments[0]).Value is string))
                 return this;
-            if (methodCallExpression.Method.Name == "Contains")
-                SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression));
-            if (methodCallExpression.Method.Name == "StartsWith")
-                SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression, LikeClauseMatchType.StartsWith));
-            if (methodCallExpression.Method.Name == "EndsWith")
-                SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression, LikeClauseMatchType.EndWith));
+            switch (methodCallExpression.Method.Name)
+            {
+                case "Contains":
+                    SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression));
+                    break;
+                case "StartsWith":
+                    SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression, LikeClauseMatchType.StartsWith));
+                    break;
+                case "EndsWith":
+                    SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression, LikeClauseMatchType.EndWith));
+                    break;
+            }
+
             return this;
         }
 

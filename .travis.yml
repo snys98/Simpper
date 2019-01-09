@@ -3,7 +3,8 @@ language: c
 os: windows
 solution: Simpper.sln
 script:
-  - choco install sqllocaldb
+  - choco install sqllocaldb -y
+  - choco install nuget.commandline -y
   - nuget restore
   - dotnet build
   - dotnet test
