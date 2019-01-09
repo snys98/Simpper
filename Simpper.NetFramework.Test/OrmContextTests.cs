@@ -504,7 +504,8 @@ namespace Simpper.NetFramework.Test
                 {
                     connection.Open();
                     SqlCommand cmd = connection.CreateCommand();
-                    cmd.CommandText = String.Format("CREATE DATABASE {0} ON (NAME = N'{0}', FILENAME = '{1}')", "Test", testDbPath);
+                    cmd.CommandText = string.Format(@"exec sp_detach_db '{0}';", "Test");
+                    cmd.CommandText += String.Format("CREATE DATABASE {0} ON (NAME = N'{0}', FILENAME = '{1}')", "Test", testDbPath);
                     cmd.ExecuteNonQuery();
                 }
             }
@@ -517,7 +518,8 @@ namespace Simpper.NetFramework.Test
                 {
                     connection.Open();
                     SqlCommand cmd = connection.CreateCommand();
-                    cmd.CommandText = String.Format("CREATE DATABASE {0} ON (NAME = N'{0}', FILENAME = '{1}')", "TestShader1", testShader1DbPath);
+                    cmd.CommandText = string.Format(@"exec sp_detach_db '{0}';", "TestShader1");
+                    cmd.CommandText += String.Format("CREATE DATABASE {0} ON (NAME = N'{0}', FILENAME = '{1}')", "TestShader1", testShader1DbPath);
                     cmd.ExecuteNonQuery();
                 }
             }
@@ -530,7 +532,8 @@ namespace Simpper.NetFramework.Test
                 {
                     connection.Open();
                     SqlCommand cmd = connection.CreateCommand();
-                    cmd.CommandText = String.Format("CREATE DATABASE {0} ON (NAME = N'{0}', FILENAME = '{1}')", "TestShader2", testShader2DbPath);
+                    cmd.CommandText = string.Format(@"exec sp_detach_db '{0}';", "TestShader2");
+                    cmd.CommandText += String.Format("CREATE DATABASE {0} ON (NAME = N'{0}', FILENAME = '{1}')", "TestShader2", testShader2DbPath);
                     cmd.ExecuteNonQuery();
                 }
             }
