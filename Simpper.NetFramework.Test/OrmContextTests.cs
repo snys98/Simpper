@@ -250,15 +250,16 @@ namespace Simpper.NetFramework.Test
 
                 // Act
                 var result = unitUnderTest.QueryPage<TestEntity>(
-                    x => x.IntField == 30 || (x.LongField == 68 || x.StringField == "32") || x.StringField == "33" && x.IntField == 33,
+                    x => (x.IntField == 30 || (x.LongField == 68 || x.StringField == "32") || x.StringField == "33" && x.IntField == 33)||!(x.IntField < 49),
                     x => x.IntField, 0, 100);
 
                 // Assert
-                result.Count.Should().Be(3);
+                result.Count.Should().Be(4);
                 result[0].IntField.Should().Be(30);
                 result[1].IntField.Should().Be(31);
                 //result[2].IntField.Should().Be(32);
                 result[2].IntField.Should().Be(34);
+                result[3].IntField.Should().Be(49);
             }
         }
 

@@ -94,8 +94,8 @@ namespace Simpper.NetFramework
 
                 if (expression.NodeType == ExpressionType.Not)
                 {
-                    this.SqlBuilder.Append("NOT ");
-                    return this.WhereSubclause((expression as UnaryExpression).Operand);
+                    var unaryExpression = expression as UnaryExpression;
+                    return this.Not(unaryExpression);
                 }
 
                 if (expression.NodeType == ExpressionType.Constant)
@@ -200,12 +200,10 @@ namespace Simpper.NetFramework
             return this;
         }
 
-        private SqlServerSqlGenerator<T> Not(T entity)
+        private SqlServerSqlGenerator<T> Not(UnaryExpression unarrayExpression)
         {
-            var names = EntityConfigurations[typeof(T)].MutableProperties.Select(x => x.Name);
-            var setPiece = string.Format("SET ({0})", string.Join(",", names));
-            SqlBuilder.AppendLine(setPiece);
-            return this;
+            this.SqlBuilder.Append("NOT ");
+            return this.WhereSubclause(unarrayExpression.Operand);
         }
 
         private SqlServerSqlGenerator<T> Set(object entityPartial)
