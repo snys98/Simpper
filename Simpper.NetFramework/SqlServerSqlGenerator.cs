@@ -324,13 +324,13 @@ namespace Simpper.NetFramework
                 switch (matchType)
                 {
                     case LikeClauseMatchType.StartsWith:
-                        likeSubclause = string.Format("{0}%", constant.Value);
+                        likeSubclause = string.Format("'{0}%'", constant.Value);
                         break;
                     case LikeClauseMatchType.EndWith:
-                        likeSubclause = string.Format("%{0}", constant.Value);
+                        likeSubclause = string.Format("'%{0}'", constant.Value);
                         break;
                     default:
-                        likeSubclause = string.Format("%{0}%", constant.Value);
+                        likeSubclause = string.Format("'%{0}%'", constant.Value);
                         break;
                 }
 

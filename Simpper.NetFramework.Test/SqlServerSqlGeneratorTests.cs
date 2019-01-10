@@ -106,7 +106,7 @@ VALUES
             // Act
             var result = unitUnderTest.Where((x) => x.StringField.Contains("20"));
 
-            result.SqlBuilder.ToString().Should().Contain(fieldName + " LIKE %20%");
+            result.SqlBuilder.ToString().Should().Contain(fieldName + " LIKE '%20%'");
         }
 
         [TestMethod]
@@ -157,7 +157,7 @@ VALUES
             // Act
             var result = unitUnderTest.Where((x) => !x.StringField.Contains("20"));
 
-            result.SqlBuilder.ToString().Should().Contain("NOT "+ fieldName + " LIKE %20%");
+            result.SqlBuilder.ToString().Should().Contain("NOT "+ fieldName + " LIKE '%20%'");
         }
 
         [TestMethod]
@@ -171,7 +171,7 @@ VALUES
             // Act
             var result = unitUnderTest.Where((x) => x.StringField.EndsWith("20"));
 
-            result.SqlBuilder.ToString().Should().Contain(fieldName + " LIKE %20");
+            result.SqlBuilder.ToString().Should().Contain(fieldName + " LIKE '%20'");
         }
 
         [TestMethod]
@@ -184,7 +184,7 @@ VALUES
             // Act
             var result = unitUnderTest.Where((x) => x.StringField.StartsWith("20"));
 
-            result.SqlBuilder.ToString().Should().Contain(fieldName + " LIKE 20%");
+            result.SqlBuilder.ToString().Should().Contain(fieldName + " LIKE '20%'");
         }
 
         [TestMethod]

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -83,6 +84,11 @@ namespace Simpper.NetFramework
         public static bool In<T>(this T item, IEnumerable<T> list)
         {
             return list.Contains(item);
+        }
+
+        public static OrmContext ToOrmContext(this SqlConnection @this, Func<string, string> shardingIndexSelector = null)
+        {
+            return new OrmContext(@this,shardingIndexSelector);
         }
     }
 
