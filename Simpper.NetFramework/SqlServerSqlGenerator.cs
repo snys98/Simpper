@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -57,86 +58,124 @@ namespace Simpper.NetFramework
         }
         public SqlServerSqlGenerator<T> WhereSubclause(Expression expression)
         {
-            //switch (contactorType)
-            //{
-            //    case ContactorType.And:
-            //        SqlBuilder.Append("AND ");
-            //        break;
-            //    case ContactorType.Or:
-            //        SqlBuilder.Append("OR ");
-            //        break;
-            //    case ContactorType.None:
-            //        break;
-            //    default:
-            //        throw new ArgumentOutOfRangeException("contactorType", contactorType, null);
-            //}
+            switch (expression.NodeType)
+            {
+                case ExpressionType.Lambda:
+                    return WhereSubclause((expression as LambdaExpression).Body);
+                //case ExpressionType.MemberAccess:
+                //    {
+                //        var memberExpression = expression as MemberExpression;
+                //        if (memberExpression.GetValue() != null)
+                //        {
 
-            var lambdaExpression = expression as LambdaExpression;
-            if (lambdaExpression != null)
-            {
-                WhereSubclause(lambdaExpression.Body);
-            }
-            else
-            {
-                switch (expression.NodeType)
-                {
-                    //子句不单纯, 需要继续拆分
-                    case ExpressionType.AndAlso:
-                    case ExpressionType.OrElse:
-                        {
-                            var exactExpression = (BinaryExpression)expression;
-                            return expression.NodeType == ExpressionType.AndAlso
-                                ? And(exactExpression)
-                                : this.Or(exactExpression);
-                        }
-                    case ExpressionType.Not:
-                        {
-                            return this.Not(expression as UnaryExpression);
-                        }
-                    case ExpressionType.Constant:
-                        this.SqlBuilder.Append(" 1 = 1 ");
-                        return this;
-                    case ExpressionType.Call:
-                        {
-                            WhereLikeSubclause(expression as MethodCallExpression);
-                            break;
-                        }
-                    case ExpressionType.Equal:
-                    case ExpressionType.NotEqual:
-                    case ExpressionType.GreaterThan:
-                    case ExpressionType.GreaterThanOrEqual:
-                    case ExpressionType.LessThan:
-                    case ExpressionType.LessThanOrEqual:
-                        {
-                            WhereOperatorSubclause(expression as BinaryExpression);
-                            break;
-                        }
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                //        }
+                //        if (EntityConfigurations[typeof(T)].MappedProperties.Contains(memberExpression.Member as PropertyInfo) 
+                //            && Nullable.GetUnderlyingType(memberExpression.Member.DeclaringType) != null)
+                //        {
+                //            return this.Null();
+                //        }
+
+                //        return memberExpression.GetValue();
+                //    }
+                //子句不单纯, 需要继续拆分
+                case ExpressionType.AndAlso:
+                case ExpressionType.OrElse:
+                    {
+                        var exactExpression = (BinaryExpression)expression;
+                        return expression.NodeType == ExpressionType.AndAlso
+                            ? And(exactExpression)
+                            : this.Or(exactExpression);
+                    }
+                case ExpressionType.Not:
+                    {
+                        return this.Not(expression as UnaryExpression);
+                    }
+                case ExpressionType.Call:
+                    {
+                        WhereMethodSubclause(expression as MethodCallExpression);
+                        break;
+                    }
+                case ExpressionType.Equal:
+                case ExpressionType.NotEqual:
+                case ExpressionType.GreaterThan:
+                case ExpressionType.GreaterThanOrEqual:
+                case ExpressionType.LessThan:
+                case ExpressionType.LessThanOrEqual:
+                    {
+                        WhereOperatorSubclause(expression as BinaryExpression);
+                        break;
+                    }
+                case ExpressionType.Constant:
+                    this.SqlBuilder.Append(" 1 = 1 ");
+                    return this;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
             return this;
         }
 
-        private SqlServerSqlGenerator<T> WhereLikeSubclause(MethodCallExpression methodCallExpression)
+        private SqlServerSqlGenerator<T> WhereMethodSubclause(MethodCallExpression methodCallExpression)
         {
-            if (!(methodCallExpression.Arguments[0] is ConstantExpression) || !(((ConstantExpression)methodCallExpression.Arguments[0]).Value is string))
-                return this;
-            switch (methodCallExpression.Method.Name)
+            if (methodCallExpression.Arguments[0] is ConstantExpression &&
+                ((ConstantExpression)methodCallExpression.Arguments[0]).Value is string)
             {
-                case "Contains":
-                    SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression));
-                    break;
-                case "StartsWith":
-                    SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression, LikeClauseMatchType.StartsWith));
-                    break;
-                case "EndsWith":
-                    SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression, LikeClauseMatchType.EndWith));
-                    break;
+                switch (methodCallExpression.Method.Name)
+                {
+                    case "Contains":
+                        SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression));
+                        break;
+                    case "StartsWith":
+                        SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression, LikeClauseMatchType.StartsWith));
+                        break;
+                    case "EndsWith":
+                        SqlBuilder.AppendLine(BuildLikeSubclause(methodCallExpression, LikeClauseMatchType.EndWith));
+                        break;
+                }
+
+                return this;
+            }
+
+            if (methodCallExpression.Arguments[0] is MemberExpression && EntityConfigurations[typeof(T)].MappedProperties.Contains((methodCallExpression.Arguments[0] as MemberExpression).Member))
+            {
+                switch (methodCallExpression.Method.Name)
+                {
+                    case "In":
+                        this.In(methodCallExpression);
+                        break;
+                }
+            }
+
+
+            return this;
+        }
+
+        private SqlServerSqlGenerator<T> In(MethodCallExpression methodCallExpression)
+        {
+            if (methodCallExpression.Arguments[0] is MemberExpression)
+            {
+                var propertyInfo = (methodCallExpression.Arguments[0] as MemberExpression).Member as PropertyInfo;
+                var columnName = GetColumnName(propertyInfo);
+                var values = methodCallExpression.Arguments[1].GetValue() as IEnumerable;
+                var @params = new List<string>();
+                foreach (var value in values)
+                {
+                    var paramName = GetParamName(columnName);
+                    SqlParams[paramName] = value;
+                    @params.Add("@" + paramName);
+                }
+
+                if (@params.Count == 0)
+                {
+                    throw new LinqToSqlException(methodCallExpression);
+                }
+                var inClause = string.Format("{0} IN ({1})", columnName, string.Join(",", @params));
+                SqlBuilder.Append(inClause);
             }
 
             return this;
+
+            //GetColumnName(methodCallExpression.Object.Type.GetProperty());
         }
 
         public SqlServerSqlGenerator<T> Delete(Expression<Func<T, bool>> predicate)
@@ -309,7 +348,7 @@ namespace Simpper.NetFramework
 
         private SqlServerSqlGenerator<T> WhereOperatorSubclause(BinaryExpression binaryExpression)
         {
-            var propertyAccessor = binaryExpression.Left as MemberExpression;
+            var propertyAccessor = binaryExpression.Left.Simplify() as MemberExpression;
             if (propertyAccessor == null)
                 throw new LinqToSqlException("propertyAccessor需要在运算符左侧", binaryExpression);
             string @operator;
@@ -339,16 +378,15 @@ namespace Simpper.NetFramework
 
             var columnName = GetColumnName(propertyAccessor.Member as PropertyInfo);
             var paramName = GetParamName(columnName);
-            var constant = binaryExpression.Right as ConstantExpression;
-            if (constant != null)
+            var constant = binaryExpression.Right.GetValue();
+
+            if (constant == null)
             {
-                SqlParams[paramName] = constant.Value;
-                SqlBuilder.Append(string.Format("{0} {1} @{2}", columnName, @operator, paramName));
+                SqlBuilder.Append(string.Format("{0} IS {1}NULL", columnName, @operator == "=" ? "" : "NOT ", paramName));
                 return this;
             }
 
-            var value = Expression.Lambda(binaryExpression.Right).Compile().DynamicInvoke();
-            SqlParams[paramName] = value;
+            SqlParams[paramName] = constant;
             SqlBuilder.Append(string.Format("{0} {1} @{2}", columnName, @operator, paramName));
             return this;
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -109,6 +110,20 @@ VALUES
         }
 
         [TestMethod]
+        public void where_contains_should_work_with_primitive_types()
+        {
+            // Arrange
+            var unitUnderTest = this.CreateSqlServerSqlGenerator();
+
+            // Act
+            var result = unitUnderTest.Where((x) => x.StringField.In(new []{"10","20"}));
+
+            result.SqlBuilder.ToString().Should().Contain("StringField IN (@StringField0,@StringField1)");
+            result.SqlParams["StringField0"].Should().Be("10");
+            result.SqlParams["StringField1"].Should().Be("20");
+        }
+
+        [TestMethod]
         public void where_should_work_with_not_contains()
         {
             // Arrange
@@ -190,6 +205,21 @@ VALUES
             result.SqlBuilder.ToString().Should().Contain(new StringBuilder()
                 .AppendLine("WHERE")
                 .AppendLine("( IntField > @IntField0 AND IntField < @IntField1 )")
+                .ToString().Trim());
+        }
+
+        [TestMethod]
+        public void where_should_work_with_nullable()
+        {
+            // Arrange
+            var unitUnderTest = this.CreateSqlServerSqlGenerator();
+
+            // Act
+            var result = unitUnderTest.Where((x) => x.NullableDateTimeField != null);
+
+            result.SqlBuilder.ToString().Should().Contain(new StringBuilder()
+                .AppendLine("WHERE")
+                .AppendLine("NullableDateTimeField IS NOT NULL")
                 .ToString().Trim());
         }
 

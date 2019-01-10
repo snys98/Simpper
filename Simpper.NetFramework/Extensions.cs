@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Simpper.NetFramework
@@ -61,6 +63,26 @@ namespace Simpper.NetFramework
             return props.Where(x => x.PropertyType.IsSimpleType())
                 .Where(x => x.SetMethod != default(MemberInfo))
                 .Where(x => x.GetCustomAttribute<NotMappedAttribute>() == null).ToList();
+        }
+
+        public static object GetValue(this Expression expression)
+        {
+            return Expression.Lambda(expression).Compile().DynamicInvoke();
+        }
+
+        public static Expression Simplify(this Expression expression)
+        {
+            if (expression is UnaryExpression)
+            {
+                return (expression as UnaryExpression).Operand;
+            }
+
+            return expression;
+        }
+
+        public static bool In<T>(this T item, IEnumerable<T> list)
+        {
+            return list.Contains(item);
         }
     }
 

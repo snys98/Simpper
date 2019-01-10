@@ -250,7 +250,7 @@ namespace Simpper.NetFramework.Test
 
                 // Act
                 var result = unitUnderTest.QueryPage<TestEntity>(
-                    x => (x.IntField == 30 || (x.LongField == 68 || x.StringField == "32") || x.StringField == "33" && x.IntField == 33)||!(x.IntField < 49),
+                    x => (x.IntField == 30 || (x.LongField == 68 || x.StringField == "32") || x.StringField == "33" && x.IntField == 33) || !(x.IntField < 49),
                     x => x.IntField, 0, 100);
 
                 // Assert
@@ -261,6 +261,73 @@ namespace Simpper.NetFramework.Test
                 result[2].IntField.Should().Be(34);
                 result[3].IntField.Should().Be(49);
             }
+        }
+
+        [TestMethod]
+        public void select_should_work_with_nullable_param()
+        {
+            int GetValueByIntField(int? value)
+            {
+                using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
+                {
+
+                    for (int i = 0; i < 50; i++)
+                    {
+                        unitUnderTest.Insert(new TestEntity()
+                        {
+                            IntField = i,
+                            StringField = (i + 1).ToString(),
+                            EnumField = TestEnum.One,
+                            LongField = 2 * i
+                        });
+                    }
+
+                    // Act
+                    var result = unitUnderTest.QueryFirst<TestEntity>(
+                        x => x.IntField == value);
+
+                    // Assert
+                    result.IntField.Should().Be(value);
+                    return result.IntField;
+                }
+            }
+
+            GetValueByIntField(10);
+            // Arrange
+        }
+
+        [TestMethod]
+        public void select_should_work_with_self_nullable()
+        {
+            using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
+            {
+
+                for (int i = 0; i < 2; i++)
+                {
+                    unitUnderTest.Insert(new TestEntity()
+                    {
+                        IntField = i,
+                        StringField = (i + 1).ToString(),
+                        EnumField = TestEnum.One,
+                        LongField = 2 * i,
+                        NullableDateTimeField = i == 0 ? DateTime.Now : (DateTime?) null
+                    });
+                }
+
+                // Act
+                var result = unitUnderTest.QueryFirst<TestEntity>(
+                    x => x.NullableDateTimeField != null);
+
+                // Assert
+                result.IntField.Should().Be(0);
+
+                var result1 = unitUnderTest.QueryFirst<TestEntity>(
+                    x => x.NullableDateTimeField == null);
+
+                // Assert
+                result1.IntField.Should().Be(1);
+            }
+            // Arrange
         }
 
         [TestMethod]
