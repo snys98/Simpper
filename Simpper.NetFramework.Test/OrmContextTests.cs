@@ -350,7 +350,7 @@ namespace Simpper.NetFramework.Test
 
                 // Act
                 var result = unitUnderTest.QueryPage<TestEntity>(
-                    x => x.IntField.In(new []{2,4,7}),x=>x.IntField, false);
+                    x => x.IntField.In(new []{2,4,7,8}) && x.IntField != 8,x=>x.IntField, false);
 
                 // Assert
                 result.Count.Should().Be(3);
