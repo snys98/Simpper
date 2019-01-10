@@ -216,8 +216,8 @@ namespace Simpper.NetFramework.Test
                 var result = unitUnderTest.QueryPage<TestEntity>(
                     x => true,
                     x => x.StringField,
-                    pageIndex,
-                    pageSize);
+                    pageIndex: pageIndex,
+                    pageSize: pageSize);
 
                 // Assert
                 result.Count.Should().Be(pageSize);
@@ -251,7 +251,7 @@ namespace Simpper.NetFramework.Test
                 // Act
                 var result = unitUnderTest.QueryPage<TestEntity>(
                     x => (x.IntField == 30 || (x.LongField == 68 || x.StringField == "32") || x.StringField == "33" && x.IntField == 33) || !(x.IntField < 49),
-                    x => x.IntField, 0, 100);
+                    x => x.IntField, pageIndex: 0, pageSize: 100);
 
                 // Assert
                 result.Count.Should().Be(4);
@@ -331,6 +331,38 @@ namespace Simpper.NetFramework.Test
         }
 
         [TestMethod]
+        public void select_should_work_with_list_contains()
+        {
+            using (var unitUnderTest = this.CreateOrmContext(new SqlConnection(_connStr)))
+            {
+
+                for (int i = 0; i < 10; i++)
+                {
+                    unitUnderTest.Insert(new TestEntity()
+                    {
+                        IntField = i,
+                        StringField = (i + 1).ToString(),
+                        EnumField = TestEnum.One,
+                        LongField = 2 * i,
+                        NullableDateTimeField = i == 0 ? DateTime.Now : (DateTime?)null
+                    });
+                }
+
+                // Act
+                var result = unitUnderTest.QueryPage<TestEntity>(
+                    x => x.IntField.In(new []{2,4,7}),x=>x.IntField, false);
+
+                // Assert
+                result.Count.Should().Be(3);
+
+                result[0].IntField.Should().Be(7);
+                result[1].IntField.Should().Be(4);
+                result[2].IntField.Should().Be(2);
+            }
+            // Arrange
+        }
+
+        [TestMethod]
         public void select_list_should_return_rest_when_not_enough()
         {
             // Arrange
@@ -354,8 +386,8 @@ namespace Simpper.NetFramework.Test
                 var result = unitUnderTest.QueryPage(
                     predicate,
                     sort,
-                    pageIndex,
-                    pageSize);
+                    pageIndex: pageIndex,
+                    pageSize: pageSize);
 
                 // Assert
                 result.Count.Should().Be(20);
@@ -513,8 +545,8 @@ namespace Simpper.NetFramework.Test
                 var result = unitUnderTest.QueryPage<TestEntity>(
                     x => x.IntField >= 0 && x.IntField <= 100,
                     x => x.StringField,
-                    pageIndex,
-                    pageSize);
+                    pageIndex: pageIndex,
+                    pageSize: pageSize);
 
                 // Assert
                 result.Count.Should().Be(100);
@@ -549,8 +581,8 @@ namespace Simpper.NetFramework.Test
                 var result = unitUnderTest.QueryPage<TestEntity>(
                     x => true,
                     x => x.StringField,
-                    pageIndex,
-                    pageSize);
+                    pageIndex: pageIndex,
+                    pageSize: pageSize);
 
                 // Assert
                 result.Count.Should().Be(pageSize);

@@ -121,6 +121,30 @@ VALUES
             result.SqlBuilder.ToString().Should().Contain("StringField IN (@StringField0,@StringField1)");
             result.SqlParams["StringField0"].Should().Be("10");
             result.SqlParams["StringField1"].Should().Be("20");
+
+            result = unitUnderTest.Where((x) => x.IntField.In(new[] { 10, 20 }));
+
+            result.SqlBuilder.ToString().Should().Contain("IntField IN (@IntField0,@IntField1)");
+            result.SqlParams["IntField0"].Should().Be(10);
+            result.SqlParams["IntField1"].Should().Be(20);
+
+            result = unitUnderTest.Where((x) => x.DateTimeField.In(new[] { DateTime.Today.ToUnixEpoch(), DateTime.Today.AddDays(1).ToUnixEpoch() }));
+
+            result.SqlBuilder.ToString().Should().Contain("DateTimeField IN (@DateTimeField0,@DateTimeField1)");
+            result.SqlParams["DateTimeField0"].Should().Be(DateTime.Today.ToUnixEpoch());
+            result.SqlParams["DateTimeField1"].Should().Be(DateTime.Today.AddDays(1).ToUnixEpoch());
+
+            result = unitUnderTest.Where((x) => x.NullableDateTimeField.In(new[] { DateTime.Today.ToUnixEpoch(), (DateTime?)null }));
+
+            result.SqlBuilder.ToString().Should().Contain("NullableDateTimeField IN (@NullableDateTimeField0,@NullableDateTimeField1)");
+            result.SqlParams["NullableDateTimeField0"].Should().Be(DateTime.Today.ToUnixEpoch());
+            result.SqlParams["NullableDateTimeField1"].Should().Be(null);
+
+            result = unitUnderTest.Where((x) => x.DecimalField.In(new[] { 1.1M, -3.3333333333333333M }.ToList()));
+
+            result.SqlBuilder.ToString().Should().Contain("DecimalField IN (@DecimalField0,@DecimalField1)");
+            result.SqlParams["DecimalField0"].Should().Be(1.1M);
+            result.SqlParams["DecimalField1"].Should().Be(-3.3333333333333333M);
         }
 
         [TestMethod]

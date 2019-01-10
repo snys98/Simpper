@@ -414,7 +414,7 @@ namespace Simpper.NetFramework
             else
                 memberExpression = (MemberExpression)sort.Body;
             var columnName = GetColumnName(memberExpression.Member as PropertyInfo);
-            var selectPiece = string.Format(" ORDER BY {0}", columnName);
+            var selectPiece = string.Format(" ORDER BY {0} {1}", columnName, asc?"ASC":"DESC");
             SqlBuilder.AppendLine(selectPiece);
             return this;
         }

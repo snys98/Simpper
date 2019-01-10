@@ -19,9 +19,10 @@ namespace Simpper.NetFramework
             return this._conn.QueryFirst<T>(sql, generator.SqlParams);
         }
 
-        public List<T> QueryPage<T>(Expression<Func<T, bool>> predicate, Expression<Func<T, object>> sort, int pageIndex = 0, int pageSize = 10)
+        public List<T> QueryPage<T>(Expression<Func<T, bool>> predicate, Expression<Func<T, object>> sort, bool asc = true,
+            int pageIndex = 0, int pageSize = 10)
         {
-            var generator = new SqlServerSqlGenerator<T>().Select().Where(predicate,ContactorType.And).OrderBy(sort).Offset(pageIndex, pageSize);
+            var generator = new SqlServerSqlGenerator<T>().Select().Where(predicate,ContactorType.And).OrderBy(sort,asc).Offset(pageIndex, pageSize);
             var sql = generator.ToString();
             return this._conn.Query<T>(sql, generator.SqlParams).ToList();
         }
