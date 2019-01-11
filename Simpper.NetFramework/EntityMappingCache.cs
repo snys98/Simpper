@@ -10,7 +10,7 @@ namespace Simpper.NetFramework
 
         public EntityMappingCache()
         {
-            var tableAttr = typeof(TEntity).GetCustomAttribute<TableAttribute>();
+            var tableAttr = typeof(TEntity).GetCustomAttribute<OrmTableAttribute>();
             base._sharding = tableAttr.Sharding;
             base._rawTableName = tableAttr.Name;
             base.IdPropertyInfos = typeof(TEntity).GetIdProperties();
@@ -18,7 +18,7 @@ namespace Simpper.NetFramework
             base.MutableProperties = typeof(TEntity).GetMutableProperties();
             base.PropertyColumnMappings = this.MappedProperties.ToDictionary(x => x, x =>
             {
-                var attr = x.GetCustomAttribute<ColumnAttribute>();
+                var attr = x.GetCustomAttribute<OrmColumnAttribute>();
                 var columnName = attr == null ? x.Name : attr.Name;
                 return columnName;
             });

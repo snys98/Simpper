@@ -1,13 +1,13 @@
 ﻿namespace Simpper.NetFramework.Test
 {
-    [Table("ShardingEntity_{0}")]
+    [OrmTable("ShardingEntity_{0}")]
     public class ShardingEntity
     {
-        [Key]
-        [Identity]
+        [OrmKey]
+        [OrmIdentity]
         public int Id { get; set; }
 
-        [Column("IntField")]
+        [OrmColumn("IntField")]
         public int IntField { get; set; }
     }
 }

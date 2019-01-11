@@ -41,7 +41,7 @@ namespace Simpper.NetFramework
         public static List<PropertyInfo> GetIdProperties(this Type type)
         {
             var tp = type.GetProperties().Where(p =>
-                p.GetCustomAttributes(true).Any(attr => attr.GetType().Name == typeof(KeyAttribute).Name)).ToList();
+                p.GetCustomAttributes(true).Any(attr => attr.GetType().Name == typeof(OrmKeyAttribute).Name)).ToList();
             return tp.Any()
                 ? tp
                 : type.GetProperties().Where(p => p.Name.Equals("Id", StringComparison.OrdinalIgnoreCase)).ToList();
@@ -53,8 +53,8 @@ namespace Simpper.NetFramework
 
             return props.Where(x => x.PropertyType.IsSimpleType())
                 .Where(x => x.SetMethod != default(MemberInfo))
-                .Where(x => x.GetCustomAttribute<IdentityAttribute>() == null)
-                .Where(x => x.GetCustomAttribute<NotMappedAttribute>() == null).ToList();
+                .Where(x => x.GetCustomAttribute<OrmIdentityAttribute>() == null)
+                .Where(x => x.GetCustomAttribute<OrmNotMappedAttribute>() == null).ToList();
         }
 
         public static List<PropertyInfo> GetMappedProperties(this Type type)
@@ -63,7 +63,7 @@ namespace Simpper.NetFramework
 
             return props.Where(x => x.PropertyType.IsSimpleType())
                 .Where(x => x.SetMethod != default(MemberInfo))
-                .Where(x => x.GetCustomAttribute<NotMappedAttribute>() == null).ToList();
+                .Where(x => x.GetCustomAttribute<OrmNotMappedAttribute>() == null).ToList();
         }
 
         public static object GetValue(this Expression expression)

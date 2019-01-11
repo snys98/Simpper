@@ -2,7 +2,7 @@
 
 namespace Simpper.NetFramework.Test
 {
-    [Table("TestEntity")]
+    [OrmTable("TestEntity")]
     public class TestEntity
     {
         public TestEntity()
@@ -10,32 +10,32 @@ namespace Simpper.NetFramework.Test
             DateTimeField = DateTime.Now;
         }
 
-        [Key]
-        [Identity]
+        [OrmKey]
+        [OrmIdentity]
         public int Id { get; set; }
 
-        [Column("StringField")]
+        [OrmColumn("StringField")]
         public string StringField { get; set; }
-        [Column("IntField")]
+        [OrmColumn("IntField")]
         public int IntField { get; set; }
-        [Column("DateTimeField")]
+        [OrmColumn("DateTimeField")]
         public DateTime DateTimeField { get; set; }
-        [Column("NullableDateTimeField")]
+        [OrmColumn("NullableDateTimeField")]
         public DateTime? NullableDateTimeField { get; set; }
-        [Column("EnumField")]
+        [OrmColumn("EnumField")]
         public TestEnum EnumField { get; set; }
-        [Column("DecimalField")]
+        [OrmColumn("DecimalField")]
         public decimal DecimalField { get; set; }
-        [Column("GuidField")]
+        [OrmColumn("GuidField")]
         public Guid GuidField { get; set; }
-        [Column("LongField")]
+        [OrmColumn("LongField")]
         public long LongField { get; set; }
         public string ExtraReadOnly {
             get { return this.StringField + this.IntField; }
         }
-        [NotMapped]
+        [OrmNotMapped]
         public string ExtraNotMapped { get; set; }
-        [NotMapped]
+        [OrmNotMapped]
         public string ExtraNotMappedWithBackingField { get; set; }
     }
 

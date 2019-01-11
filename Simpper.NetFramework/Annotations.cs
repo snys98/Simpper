@@ -7,16 +7,15 @@ namespace Simpper.NetFramework
     ///     You can use the System.ComponentModel.DataAnnotations version in its place to specify the table name of a poco
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
-    public class TableAttribute : Attribute
+    public class OrmTableAttribute : Attribute
     {
         /// <summary>
         ///     Optional Table attribute.
         /// </summary>
         /// <param name="tableName"></param>
-        public TableAttribute(string tableName)
+        public OrmTableAttribute(string tableName)
         {
             Name = tableName;
-            Sharding = tableName.Contains("_{0}");
         }
 
         /// <summary>
@@ -24,7 +23,9 @@ namespace Simpper.NetFramework
         /// </summary>
         public string Name { get; private set; }
 
-        public bool Sharding { get; private set; }
+        public bool Sharding {
+            get { return this.Name.Contains("_{0}"); }
+        }
     }
 
     /// <summary>
@@ -32,13 +33,13 @@ namespace Simpper.NetFramework
     ///     You can use the System.ComponentModel.DataAnnotations version in its place to specify the table name of a poco
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
-    public class ColumnAttribute : Attribute
+    public class OrmColumnAttribute : Attribute
     {
         /// <summary>
         ///     Optional Column attribute.
         /// </summary>
         /// <param name="columnName"></param>
-        public ColumnAttribute(string columnName)
+        public OrmColumnAttribute(string columnName)
         {
             Name = columnName;
         }
@@ -54,10 +55,10 @@ namespace Simpper.NetFramework
     ///     You can use the System.ComponentModel.DataAnnotations version in its place to specify the Primary Key of a poco
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
-    public class KeyAttribute : Attribute
+    public class OrmKeyAttribute : Attribute
     {
 
-        public KeyAttribute()
+        public OrmKeyAttribute()
         {
         }
     }
@@ -67,10 +68,10 @@ namespace Simpper.NetFramework
     ///     You can use the System.ComponentModel.DataAnnotations version in its place to specify the Primary Key of a poco
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
-    public class IdentityAttribute : Attribute
+    public class OrmIdentityAttribute : Attribute
     {
 
-        public IdentityAttribute()
+        public OrmIdentityAttribute()
         {
         }
     }
@@ -81,7 +82,7 @@ namespace Simpper.NetFramework
     ///     mapped
     /// </summary>
     [AttributeUsage(AttributeTargets.Property)]
-    public class NotMappedAttribute : Attribute
+    public class OrmNotMappedAttribute : Attribute
     {
     }
 }
