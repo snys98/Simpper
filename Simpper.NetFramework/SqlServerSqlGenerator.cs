@@ -102,7 +102,14 @@ namespace Simpper.NetFramework
                 case ExpressionType.LessThan:
                 case ExpressionType.LessThanOrEqual:
                     {
-                        WhereOperatorSubclause(expression as BinaryExpression);
+                        var binaryExpression = expression as BinaryExpression;
+                        var left = binaryExpression.Left.Simplify() as MemberExpression;
+                        if (left != null &&
+                            left.Member is PropertyInfo &&
+                            EntityConfigurations[typeof(T)].MappedProperties.Contains(left.Member))
+                        {
+                            WhereOperatorSubclause(binaryExpression);
+                        }
                         break;
                     }
                 case ExpressionType.Constant:
@@ -414,7 +421,7 @@ namespace Simpper.NetFramework
             else
                 memberExpression = (MemberExpression)sort.Body;
             var columnName = GetColumnName(memberExpression.Member as PropertyInfo);
-            var selectPiece = string.Format(" ORDER BY {0} {1}", columnName, asc?"ASC":"DESC");
+            var selectPiece = string.Format(" ORDER BY {0} {1}", columnName, asc ? "ASC" : "DESC");
             SqlBuilder.AppendLine(selectPiece);
             return this;
         }

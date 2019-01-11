@@ -88,7 +88,22 @@ namespace Simpper.NetFramework
 
         public static OrmContext ToOrmContext(this SqlConnection @this, Func<string, string> shardingIndexSelector = null)
         {
-            return new OrmContext(@this,shardingIndexSelector);
+            return new OrmContext(@this, shardingIndexSelector);
+        }
+    }
+
+    public static class ExpressionOperateExpressions
+    {
+        public static Expression<Func<T, bool>> AndAlso<T>(this Expression<Func<T, bool>> @this,
+            Expression<Func<T, bool>> and)
+        {
+            return Expression.Lambda<Func<T, bool>>(Expression.AndAlso(@this.Body, and.Body), @this.Parameters[0]);
+        }
+
+        public static Expression<Func<T, bool>> OrElse<T>(this Expression<Func<T, bool>> @this,
+            Expression<Func<T, bool>> @else)
+        {
+            return Expression.Lambda<Func<T, bool>>(Expression.OrElse(@this.Body, @else.Body), @this.Parameters[0]);
         }
     }
 

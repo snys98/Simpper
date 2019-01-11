@@ -253,31 +253,52 @@ namespace Simpper.NetFramework.Test
         [TestMethod]
         public void select_should_work_with_nullable_param()
         {
-            int GetValueByIntField(int? value)
-            {
-                using (var ormContext = new SqlConnection(_connStr).ToOrmContext())
-                {
-                    for (var i = 0; i < 50; i++)
-                        ormContext.Insert(new TestEntity
-                        {
-                            IntField = i,
-                            StringField = (i + 1).ToString(),
-                            EnumField = TestEnum.One,
-                            LongField = 2 * i
-                        });
-
-                    // Act
-                    var result = ormContext.QueryFirst<TestEntity>(
-                        x => x.IntField == value);
-
-                    // Assert
-                    result.IntField.Should().Be(value);
-                    return result.IntField;
-                }
-            }
-
             GetValueByIntField(10);
             // Arrange
+        }
+
+        private int GetValueByIntField(int? value)
+        {
+            using (var ormContext = new SqlConnection(_connStr).ToOrmContext())
+            {
+                for (var i = 0; i < 50; i++) ormContext.Insert(new TestEntity {IntField = i, StringField = (i + 1).ToString(), EnumField = TestEnum.One, LongField = 2 * i});
+
+                // Act
+                var result = ormContext.QueryFirst<TestEntity>(x => x.IntField == value);
+
+                // Assert
+                result.IntField.Should().Be(value);
+                return result.IntField;
+            }
+        }
+
+        [TestMethod]
+        public void select_should_work_with_nullable_date_time()
+        {
+            GetValueByDateTimeField((DateTime?) DateTime.Now).Should().BeAfter(DateTime.Now);
+            GetValueByDateTimeField(null).Should().Be(DateTime.Today.AddDays(1));
+            // Arrange
+        }
+
+        private DateTime GetValueByDateTimeField(DateTime? value)
+        {
+            using (var ormContext = new SqlConnection(_connStr).ToOrmContext())
+            {
+                ormContext.Insert(new TestEntity
+                {
+                    IntField = 0,
+                    StringField = (0 + 1).ToString(),
+                    EnumField = TestEnum.One,
+                    LongField = 2 * 0,
+                    DateTimeField = DateTime.Today.AddDays(1)
+                });
+
+                // Act
+                var result = ormContext.QueryFirst<TestEntity>(x => x.DateTimeField >= (value ?? DateTimeOffset.MinValue));
+
+                // Assert
+                return result.DateTimeField;
+            }
         }
 
         [TestMethod]
