@@ -14,7 +14,7 @@ namespace Simpper.NetFramework
 
         public T QueryFirst<T>(Expression<Func<T, bool>> predicate)
         {
-            var generator = new SqlServerSqlGenerator<T>().Select(1).Where(predicate, ContactorType.And);
+            var generator = new SqlServerSqlGenerator<T>().Select(1).Where(predicate);
             var sql = generator.ToString();
             return this._conn.QueryFirst<T>(sql, generator.SqlParams);
         }
@@ -22,7 +22,7 @@ namespace Simpper.NetFramework
         public List<T> QueryPage<T>(Expression<Func<T, bool>> predicate, Expression<Func<T, object>> sort, bool asc = true,
             int pageIndex = 0, int pageSize = 10)
         {
-            var generator = new SqlServerSqlGenerator<T>().Select().Where(predicate,ContactorType.And).OrderBy(sort,asc).Offset(pageIndex, pageSize);
+            var generator = new SqlServerSqlGenerator<T>().Select().Where(predicate).OrderBy(sort,asc).Offset(pageIndex, pageSize);
             var sql = generator.ToString();
             return this._conn.Query<T>(sql, generator.SqlParams).ToList();
         }
@@ -50,7 +50,7 @@ namespace Simpper.NetFramework
 
         public long Count<T>(Expression<Func<T, bool>> predicate)
         {
-            var generator = new SqlServerSqlGenerator<T>().Count().Where(predicate, ContactorType.And);
+            var generator = new SqlServerSqlGenerator<T>().Count().Where(predicate);
             var sql = generator.ToString();
             return this._conn.ExecuteScalar<long>(sql, generator.SqlParams);
         }

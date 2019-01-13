@@ -46,7 +46,7 @@ namespace Simpper.NetFramework
             return this;
         }
 
-        public SqlServerSqlGenerator<T> Where(Expression<Func<T, bool>> predicate, ContactorType contactorType = ContactorType.None)
+        public SqlServerSqlGenerator<T> Where(Expression<Func<T, bool>> predicate)
         {
             var expression = predicate as LambdaExpression;
             if (expression == null)
@@ -190,7 +190,7 @@ namespace Simpper.NetFramework
             var tableName = EntityConfigurations[typeof(T)].GetTableName(ShardingIndex);
             var deletePiece = string.Format("DELETE FROM {0}", tableName);
             SqlBuilder.AppendLine(deletePiece);
-            Where(predicate, ContactorType.And);
+            Where(predicate);
             SqlBuilder.AppendLine(" SELECT @@ROWCOUNT");
             return this;
         }
@@ -268,7 +268,7 @@ namespace Simpper.NetFramework
             this.Set(entityPartial);
             //this.Values(entityPartial);
             SqlBuilder.AppendLine();
-            this.Where(predicate, ContactorType.And);
+            this.Where(predicate);
             return this;
         }
 

@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Dapper;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -471,6 +473,53 @@ namespace Simpper.NetFramework.Test
                 result.LongField.Should().Be(entity.LongField);
                 result.NullableDateTimeField.Should().Be(null);
                 result.StringField.Should().Be(entity.StringField);
+            }
+        }
+
+        [TestMethod]
+        public void insert_all_fields_should_be_thread_safe()
+        {
+
+            var tasks = new List<Task>();
+            for (int i = 0; i < 40; i++)
+            {
+
+                var task = Task.Run(() =>
+                {
+                    using (var ormContext = new SqlConnection(_connStr).ToOrmContext())
+                    {
+
+                        var entity = new TestEntity
+                        {
+                            IntField = i,
+                            DateTimeField = DateTime.Now.ToUnixEpoch(),
+                            DecimalField = 0.23333333333M,
+                            EnumField = TestEnum.One,
+                            ExtraNotMapped = "ExtraNotMapped",
+                            ExtraNotMappedWithBackingField = "ExtraNotMappedWithBackingField",
+                            GuidField = Guid.Parse("025017ca-7259-4604-8760-85b4b343270a"),
+                            LongField = 2222222222,
+                            NullableDateTimeField = null,
+                            StringField = "StringField"
+                        };
+                        ormContext.Insert(entity);
+                    }
+                });
+                tasks.Add(task);
+            }
+
+            Task.WaitAll(tasks.ToArray());
+
+            // Arrange
+            using (var ormContext = new SqlConnection(_connStr).ToOrmContext())
+            {
+                
+
+                // Act
+                var result = ormContext.QueryPage<TestEntity>(x =>
+                    x.GuidField == Guid.Parse("025017ca-7259-4604-8760-85b4b343270a"), x => x.IntField, true, 0, 50);
+
+                result.Count().Should().Be(40);
             }
         }
 
